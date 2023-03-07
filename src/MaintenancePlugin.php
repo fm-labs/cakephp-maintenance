@@ -8,7 +8,9 @@ use Cake\Core\BasePlugin;
 use Cake\Core\ContainerInterface;
 use Cake\Core\PluginApplicationInterface;
 use Cake\Http\MiddlewareQueue;
+use Cake\Routing\Middleware\RoutingMiddleware;
 use Cake\Routing\RouteBuilder;
+use Maintenance\Routing\Middleware\MaintenanceMiddleware;
 
 /**
  * Plugin for Maintenance
@@ -58,6 +60,8 @@ class MaintenancePlugin extends BasePlugin
      */
     public function middleware(MiddlewareQueue $middlewareQueue): MiddlewareQueue
     {
+        //$middlewareQueue->prepend(MaintenanceMiddleware::class);
+        $middlewareQueue->insertAfter(RoutingMiddleware::class, MaintenanceMiddleware::class);
         return $middlewareQueue;
     }
 
