@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Maintenance\Routing\Middleware;
 
 use Cake\Core\Configure;
+use Cake\Http\Response;
 use Cake\Routing\RoutingApplicationInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -16,7 +17,20 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class MaintenanceMiddleware implements MiddlewareInterface
 {
-    protected bool $_isMaintenance = false;
+    private bool $_isMaintenance = false;
+
+    /**
+     * @var string
+     */
+    private $_redirectUrl;
+    /**
+     * @var string[]
+     */
+    private $_allowedPrefixes;
+    /**
+     * @var string[]
+     */
+    private $_allowedIps;
 
     /**
      * @inheritDoc
@@ -24,6 +38,9 @@ class MaintenanceMiddleware implements MiddlewareInterface
     public function __construct(?RoutingApplicationInterface $app = null)
     {
         $this->_isMaintenance = (bool) Configure::read('Maintenance.enabled');
+        $this->_redirectUrl = Configure::read('Maintenance.redirectUrl');
+        $this->_allowedPrefixes = Configure::read('Maintenance.allowedPrefixes', ["Admin"]);
+        $this->_allowedIps = Configure::read('Maintenance.allowedIps', []);
     }
 
     /**
@@ -40,21 +57,28 @@ class MaintenanceMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $params = $request->getAttribute('params', []);
-        //($params);
-        $prefix = $params['prefix'] ?? null;
-//        if (
-//            $prefix == 'Admin' ||
-//            preg_match('/^\/' . Admin::$urlPrefix . '/', $request->getUri()->getPath())
-//        ) {
-//        }
 
-        if ($this->_isMaintenance && $prefix !== "Admin") {
+        if ($this->_isMaintenance) {
+            // check allowed prefixes
+            $prefix = $params['prefix'] ?? null;
+            if ($prefix && in_array($prefix, $this->_allowedPrefixes)) {
+                return $handler->handle($request);
+            }
+
+            //@todo check allowed ips
+            //$clientIp = $request->getClientIp();
+            $clientIp = null;
+            if ($clientIp && in_array($clientIp, $this->_allowedIps)) {
+                return $handler->handle($request);
+            }
+
 //            $response = (new Response())
 //                ->withStatus(503, "Service currently unavailable")
 //                ->withStringBody("Maintenance!");
 //            return $response;
-            $params = ['plugin' => 'Maintenance', 'controller' => 'Maintenance', 'action' => 'index'];
-            $request = $request->withAttribute('params', $params);
+//
+//            $params = ['plugin' => 'Maintenance', 'controller' => 'Maintenance', 'action' => 'index'];
+//            $request = $request->withAttribute('params', $params);
         }
 
         return $handler->handle($request);
